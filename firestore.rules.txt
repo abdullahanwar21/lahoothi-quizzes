@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isActive() { return signedIn() && me().status == 'ACTIVE'; }
+    function isAdmin() { return isActive() && me().role == 'SUPER_ADMIN'; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function isPublished() { return resource.data.status == 'PUBLISHED'; }
+
+    // Homepage settings are public. Other settings need a login.
+    match /settings/{doc} {
+      allow get: if doc == 'site' || doc == 'media' || isActive();
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // The AI key and other admin-only data.
+    match /secrets/{doc}        { allow read, write: if isAdmin(); }
+    match /assignmentKeys/{doc} { allow read, write: if isAdmin(); }
+    match /lectureSources/{doc} { allow read, write: if isAdmin(); }
+    match /audit/{doc}          { allow read, write: if isAdmin(); }
+    match /aiJobs/{doc}         { allow read, write: if isAdmin(); }
+
+    // A user can read and edit only the own profile. Role and status can be changed only by the admin.
+    match /users/{uid} {
+      allow get: if isSelf(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if (isSelf(uid) && request.resource.data.role == 'STUDENT' && request.resource.data.status == 'ACTIVE') || isAdmin();
+      allow update: if (isSelf(uid) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status) || isAdmin();
+      allow delete: if (isSelf(uid) && resource.data.status == 'ACTIVE') || isAdmin();
+    }
+
+    // Each student owns one progress document.
+    match /progress/{uid} {
+      allow get: if isSelf(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isSelf(uid) && isActive();
+      allow delete: if isSelf(uid) || isAdmin();
+    }
+
+    // Learning content: students see only published items. Only the admin writes.
+    match /subjects/{doc}    { allow read: if isAdmin() || (isActive() && isPublished()); allow write: if isAdmin(); }
+    match /lectures/{doc}    { allow read: if isAdmin() || (isActive() && isPublished()); allow write: if isAdmin(); }
+    match /quizzes/{doc}     { allow read: if isAdmin() || (isActive() && isPublished()); allow write: if isAdmin(); }
+    match /assignments/{doc} { allow read: if isAdmin() || (isActive() && isPublished()); allow write: if isAdmin(); }
+    match /visuals/{doc}     { allow read: if isAdmin() || (isActive() && isPublished()); allow write: if isAdmin(); }
+    match /notifications/{doc} { allow read: if isActive(); allow write: if isAdmin(); }
+
+    // The answer key of a quiz opens for a student only after the first attempt is saved.
+    match /quizKeys/{quizId} {
+      allow get: if isAdmin() || (isActive() && exists(/databases/$(database)/documents/attempts/$(request.auth.uid + '_' + quizId + '_1')));
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Quiz attempts are saved once and never changed. The attempt limit of the quiz is enforced here.
+    match /attempts/{id} {
+      allow get: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid));
+      allow list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isActive()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.n is int
+        && request.resource.data.n >= 1
+        && id == request.auth.uid + '_' + request.resource.data.quizId + '_' + string(request.resource.data.n)
+        && get(/databases/$(database)/documents/quizzes/$(request.resource.data.quizId)).data.status == 'PUBLISHED'
+        && request.resource.data.n <= get(/databases/$(database)/documents/quizzes/$(request.resource.data.quizId)).data['limit'];
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Assignment answers: a student writes the own submission until it is submitted. Only the admin grades.
+    match /submissions/{id} {
+      allow get: if isAdmin() || (signedIn() && (resource == null || resource.data.uid == request.auth.uid));
+      allow list: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (isActive()
+        && request.resource.data.uid == request.auth.uid
+        && id == request.auth.uid + '_' + request.resource.data.assignmentId
+        && request.resource.data.status in ['DRAFT', 'SUBMITTED', 'LATE']
+        && !('score' in request.resource.data)
+        && get(/databases/$(database)/documents/assignments/$(request.resource.data.assignmentId)).data.status == 'PUBLISHED');
+      allow update: if isAdmin() || (isActive()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.assignmentId == resource.data.assignmentId
+        && resource.data.status == 'DRAFT'
+        && request.resource.data.status in ['DRAFT', 'SUBMITTED', 'LATE']
+        && !('score' in request.resource.data));
+      allow delete: if isAdmin();
+    }
+  }
+}
