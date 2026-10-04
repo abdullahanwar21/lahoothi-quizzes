@@ -5,12 +5,12 @@
    Leave them empty to run the site with sample data. */
 window.LQ_CONFIG = {
   firebase: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyBcxCFJuVdMTYJbIMlMAmFnId-UjZPZz2A",
+  authDomain: "lahoothiquizzes-a333d.firebaseapp.com",
+  projectId: "lahoothiquizzes-a333d",
+  storageBucket: "lahoothiquizzes-a333d.firebasestorage.app",
+  messagingSenderId: "606971924277",
+  appId: "1:606971924277:web:681cfb569a331e4572067c"
   },
   /* Students must open the link in the verification email before they can enter. Set to false to switch this off. */
   requireEmailVerification: true,
