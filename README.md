@@ -2,12 +2,35 @@
 
 Nursing learning platform with lecture notes, AI-generated quizzes, assignments, and progress tracking.
 
-## Live setup
+## Live site (GitHub Pages)
 
-1. Connect this repo to **Netlify** (Import from Git → select this repo).
-2. Put your Firebase keys in `firebase-config.js`.
-3. Paste `firestore.rules.txt` into Firebase Firestore → Rules → Publish.
-4. Follow steps in `READ_ME_FIRST.txt`.
+**URL:** https://abdullahanwar21.github.io/lahoothi-quizzes/
+
+### Enable Pages (one time)
+1. Repo → **Settings** → **Pages**
+2. Source: **Deploy from a branch**
+3. Branch: **main** / folder: **/ (root)**
+4. **Save**
+5. Wait 1–2 minutes, then open the URL above.
+
+### Required files on main branch
+- `index.html` (root)
+- `admin/index.html`
+- `banner.jpg`
+- `firebase-config.js` (already set)
+- `firestore.rules.txt`
+
+If `index.html` is missing, upload it: https://github.com/abdullahanwar21/lahoothi-quizzes/upload/main
+
+## Firebase
+
+1. Keys are in `firebase-config.js`.
+2. Firestore rules: paste `firestore.rules.txt` → Publish.
+3. Authentication → Email/Password enabled.
+4. Authorized domains: add `abdullahanwar21.github.io`
+5. Register on the live site → Firestore `users` → set `role` to `SUPER_ADMIN`.
+6. Admin panel: https://abdullahanwar21.github.io/lahoothi-quizzes/admin/
+7. Gemini API key: Admin → Settings.
 
 ## Structure
 
@@ -15,13 +38,6 @@ Nursing learning platform with lecture notes, AI-generated quizzes, assignments,
 |------|--------|
 | `index.html` | Public site + student portal |
 | `admin/index.html` | Super Admin panel |
-| `firebase-config.js` | Firebase keys (edit this) |
+| `firebase-config.js` | Firebase keys |
 | `firestore.rules.txt` | Database security rules |
 | `banner.jpg` | Homepage banner |
-
-## Netlify settings
-
-- **Build command**: leave empty
-- **Publish directory**: `/` (root)
-
-After deploy, add your Netlify domain under Firebase → Authentication → Authorized domains.
